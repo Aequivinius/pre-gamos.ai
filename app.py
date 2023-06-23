@@ -2,10 +2,8 @@ import os
 import json
 import openai
 import streamlit as st
-from dotenv import load_dotenv
 
-load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 
 def generate_summarizer(
