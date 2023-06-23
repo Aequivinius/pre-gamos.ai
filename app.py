@@ -1,76 +1,140 @@
+import os
 import json
 import openai
-import os
 import streamlit as st
-from flask import Flask, render_template, request
 from dotenv import load_dotenv
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-app = Flask(__name__)
-
 
 def generate_summarizer(
     max_tokens,
     temperature,
-    top_p,
-    frequency_penalty,
     prompt,
     person_type,
+    language
 ):
     res = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         max_tokens=max_tokens,
         temperature=temperature,
-        top_p=top_p,
-        frequency_penalty=frequency_penalty,
         messages=[
-         {
-          "role": "system",
-          "content": "You are a helpful assistant for text summarization.",
-         },
-         {
-          "role": "user",
-          "content": f"Summarize this for a {person_type}: {prompt}",
-         },
+            {
+                "role": "system",
+                "content": "You are a helpful assistant for text summarization.",
+            },
+            {
+                "role": "user",
+                "content": f"Summarize this for a {person_type},: {prompt}",
+            },
+            {
+                "role": "user",
+                "content": f"Now translate this into {language}"
+            }
         ],
     )
     return res["choices"][0]["message"]["content"]
 
+
+# init the app
+papers = {}
+if "paper" not in st.session_state:
+    st.session_state.paper = ""
+
+with open("papers.json") as f:
+    papers = json.load(f)
+
 # layout app
-st.title("GPT-3.5 Text Summarizer")
-input_text = st.text_area("Enter the text you want to summarize:", height=200)
-col1, col2, col3 = st.columns(3)
+st.title(
+    "Biomedical :blue[text summarization] and :blue[simplification] using GPT-3.5 🤖"
+)
+st.subheader(
+    "By selecting a specific persona from the drop down menu below, you can indicate the degree to which your text should be simplified."
+)
 
-#Slider to control the model hyperparameter
-with col1:
-    token = st.slider("Token", min_value=0.0, max_value=200.0, value=50.0, step=1.0)
-    temp = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.0, step=0.01)
-    top_p = st.slider("Nucleus Sampling", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
-    f_pen = st.slider("Frequency Penalty", min_value=-1.0, max_value=1.0, value=0.0, step=0.01)
+st.write("---")
 
-#Selection box to select the summarization style
-with col2:
-    option = st.selectbox(
+column1, column2 = st.columns([0.66, 0.33])
+
+with column1:
+    input_text = st.text_area(
+        "Enter a text you want to summarize:",
+        height=200,
+        placeholder=papers[st.session_state.paper]["Text"],
+    )
+
+with column2:
+    options = {"": "Select an option"}
+    for p in papers.keys():
+        options[p] = papers[p]["Label"]
+
+    paper = st.selectbox(
+        "Or select one of the pre-chosen paper segments below:",
+        options.keys(),
+        key="paper",
+        format_func=lambda x: options[x],
+    )
+
+    if paper or input_text:
+        st.success("Yay! 🎉")
+    else:
+        st.warning("No option is selected")
+
+st.write("---")
+
+# options
+options_column1, options_column2, options_column3 = st.columns(3)
+
+
+# Slider to control the model hyperparameter
+with options_column1:
+    token = st.slider("№ tokens", min_value=0, max_value=200, value=100, step=1)
+    temp = st.slider(
+        "🌡️ Temperature",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.2,
+        step=0.01,
+        help="Temperature indicates how reproducable GPT-3.5's results will be, with 0 meaning very reproduceable, and 1 meaning practically random.",
+    )
+    # top_p = st.slider(
+    #    "Nucleus Sampling", min_value=0.0, max_value=1.0, value=0.5, step=0.01
+    # )
+    # f_pen = st.slider(
+    #    "Frequency Penalty", min_value=-1.0, max_value=1.0, value=0.0, step=0.01
+    # ) """  # these are not so relevant to this demonstration
+
+# Selection box to select the summarization style
+with options_column2:
+    persona = st.selectbox(
         "How do you like to be explained?",
         (
             "Second-Grader",
             "Professional Data Scientist",
-            "Housewive",
-            "Retired",
+            "Layperson",
             "University Student",
         ),
     )
 
-# Showing the current parameter used for the model
-with col3:
-    with st.expander("Current Parameter"):
-        st.write("Current Token :", token)
-        st.write("Current Temperature :", temp)
-        st.write("Current Nucleus Sampling :", top_p)
-        st.write("Current Frequency Penalty :", f_pen)
+with options_column3:
+    languages = {
+        "English" : "🇬🇧",
+        "Spanish" : "🇪🇸",
+        "German" : "🇩🇪",
+        "Japanese" : "🇯🇵"
+    }
+
+    language = st.radio(
+        "What language would you like the output to be in?", 
+        languages.keys(),
+        format_func = lambda x: languages[x]
+    )
 
 # Creating button for execute the text summarization
-if st.button("Summarize"):
-    st.write(generate_summarizer(token, temp, top_p, f_pen, input_text, option))
+if st.button("Summarize!", type="primary", use_container_width=True, disabled=bool(not (paper or input_text))):
+    with st.spinner("Request sent to GPT-3.5"):
+        st.success(generate_summarizer(token, temp, input_text if input_text else papers[paper]["Text"], persona, language))
+
+if not(paper or input_text):
+    st.warning("Enter text or select paper first")
