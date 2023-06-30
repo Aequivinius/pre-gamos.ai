@@ -6,13 +6,11 @@ import streamlit as st
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 
-def generate_summarizer(
-    max_tokens,
-    temperature,
-    prompt,
-    person_type,
-    language
-):
+def generate_summarizer(max_tokens, temperature, prompt, person_type, language):
+
+    lengths = [ "extremely short", "short", "long" ]
+    length = lengths[int(max_tokens / 200)]
+
     res = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         max_tokens=max_tokens,
@@ -24,15 +22,12 @@ def generate_summarizer(
             },
             {
                 "role": "user",
-                "content": f"Summarize this for a {person_type},: {prompt}",
+                "content": f"Create a {length} summary of the following for a {person_type},: {prompt}",
             },
-            {
-                "role": "user",
-                "content": f"Now translate this into {language}"
-            }
+            {"role": "user", "content": f"Now translate this into {language}"},
         ],
     )
-    return res["choices"][0]["message"]["content"]
+    return res["choices"][0]["message"]["content"], res['choices'][0]['finish_reason']
 
 
 # init the app
@@ -87,7 +82,7 @@ options_column1, options_column2, options_column3 = st.columns(3)
 
 # Slider to control the model hyperparameter
 with options_column1:
-    token = st.slider("№ tokens", min_value=0, max_value=200, value=100, step=1)
+    token = st.slider("maximum № tokens", min_value=0, max_value=500, value=250, step=1, help="""GPT does not allow generation of responses of a certain length; rather, it will finish when it it has *finished an idea*. However, this value will influence the prompt: `max_tokens < 200` for *extremely short*, `200-300` for *short* and above that for *long*. However, while it has some effect on the response, it is not deterministic.""")
     temp = st.slider(
         "🌡️ Temperature",
         min_value=0.0,
@@ -105,34 +100,46 @@ with options_column1:
 
 # Selection box to select the summarization style
 with options_column2:
+    personae = { "Second-Grader" : "👶", 
+            "Adult Layperson" : "🧑", 
+            "University Student in Biomedicine" : "🧑‍🎓", 
+            "Professional Clinician" : "🧑‍⚕️" }
     persona = st.selectbox(
         "How do you like to be explained?",
-        (
-            "Second-Grader",
-            "Professional Data Scientist",
-            "Layperson",
-            "University Student",
-        ),
+        personae.keys(),
+        format_func=lambda x: f"{personae[x]} {x}"
     )
 
 with options_column3:
-    languages = {
-        "English" : "🇬🇧",
-        "Spanish" : "🇪🇸",
-        "German" : "🇩🇪",
-        "Japanese" : "🇯🇵"
-    }
+    languages = {"English": "EN", "Spanish": "ES", "German": "DE", "Japanese": "JP"}
 
     language = st.radio(
-        "What language would you like the output to be in?", 
+        "What language would you like the output to be in?",
         languages.keys(),
-        format_func = lambda x: languages[x]
+        format_func=lambda x: languages[x],
     )
 
 # Creating button for execute the text summarization
-if st.button("Summarize!", type="primary", use_container_width=True, disabled=bool(not (paper or input_text))):
+if st.button(
+    "Summarize!",
+    type="primary",
+    use_container_width=True,
+    disabled=bool(not (paper or input_text)),
+):
     with st.spinner("Request sent to GPT-3.5"):
-        st.success(generate_summarizer(token, temp, input_text if input_text else papers[paper]["Text"], persona, language))
+        message, finish_reason = generate_summarizer(
+                token,
+                temp,
+                input_text if input_text else papers[paper]["Text"],
+                persona,
+                language,
+            )
+        st.success(
+            message
+        )
 
-if not(paper or input_text):
+        if finish_reason == "length":
+            st.error("The model's response was cut off because the it was longer than the selected `max_tokens` value. Try selecting a higher value.")
+
+if not (paper or input_text):
     st.warning("Enter text or select paper first")
