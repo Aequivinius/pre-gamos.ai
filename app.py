@@ -4,11 +4,24 @@ import openai
 import streamlit as st
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
+LANGUAGES = {
+    "English": "EN",
+    "Spanish": "ES",
+    "Italian": "IT",
+    "German": "DE",
+    "Japanese": "JP",
+}
+
+PERSONAE = {
+    "Teenager": "👶",
+    "Adult Layperson": "🧑",
+    "University Student in Biomedicine": "🧑‍🎓",
+    "Professional Clinician": "🧑‍⚕️",
+}
 
 
 def generate_summarizer(max_tokens, temperature, prompt, person_type, language):
-
-    lengths = [ "extremely short", "short", "long" ]
+    lengths = ["extremely short", "short", "long"]
     length = lengths[int(max_tokens / 200)]
 
     res = openai.ChatCompletion.create(
@@ -27,7 +40,7 @@ def generate_summarizer(max_tokens, temperature, prompt, person_type, language):
             {"role": "user", "content": f"Now translate this into {language}"},
         ],
     )
-    return res["choices"][0]["message"]["content"], res['choices'][0]['finish_reason']
+    return res["choices"][0]["message"]["content"], res["choices"][0]["finish_reason"]
 
 
 # init the app
@@ -82,7 +95,14 @@ options_column1, options_column2, options_column3 = st.columns(3)
 
 # Slider to control the model hyperparameter
 with options_column1:
-    token = st.slider("maximum № tokens", min_value=0, max_value=500, value=250, step=1, help="""GPT does not allow generation of responses of a certain length; rather, it will finish when it it has *finished an idea*. However, this value will influence the prompt: `max_tokens < 200` for *extremely short*, `200-300` for *short* and above that for *long*. However, while it has some effect on the response, it is not deterministic.""")
+    token = st.slider(
+        "maximum № tokens",
+        min_value=0,
+        max_value=500,
+        value=250,
+        step=1,
+        help="""GPT does not allow generation of responses of a certain length; rather, it will finish when it it has *finished an idea*. However, this value will influence the prompt: `max_tokens < 200` for *extremely short*, `200-300` for *short* and above that for *long*. However, while it has some effect on the response, it is not deterministic.""",
+    )
     temp = st.slider(
         "🌡️ Temperature",
         min_value=0.0,
@@ -100,23 +120,17 @@ with options_column1:
 
 # Selection box to select the summarization style
 with options_column2:
-    personae = { "Second-Grader" : "👶", 
-            "Adult Layperson" : "🧑", 
-            "University Student in Biomedicine" : "🧑‍🎓", 
-            "Professional Clinician" : "🧑‍⚕️" }
     persona = st.selectbox(
         "How do you like to be explained?",
-        personae.keys(),
-        format_func=lambda x: f"{personae[x]} {x}"
+        PERSONAE.keys(),
+        format_func=lambda x: f"{PERSONAE[x]} {x}",
     )
 
 with options_column3:
-    languages = {"English": "EN", "Spanish": "ES", "German": "DE", "Japanese": "JP"}
-
     language = st.radio(
         "What language would you like the output to be in?",
-        languages.keys(),
-        format_func=lambda x: languages[x],
+        LANGUAGES.keys(),
+        format_func=lambda x: LANGUAGES[x],
     )
 
 # Creating button for execute the text summarization
@@ -128,18 +142,18 @@ if st.button(
 ):
     with st.spinner("Request sent to GPT-3.5"):
         message, finish_reason = generate_summarizer(
-                token,
-                temp,
-                input_text if input_text else papers[paper]["Text"],
-                persona,
-                language,
-            )
-        st.success(
-            message
+            token,
+            temp,
+            input_text if input_text else papers[paper]["Text"],
+            persona,
+            language,
         )
+        st.success(message)
 
         if finish_reason == "length":
-            st.error("The model's response was cut off because the it was longer than the selected `max_tokens` value. Try selecting a higher value.")
+            st.error(
+                "The model's response was cut off because the it was longer than the selected `max_tokens` value. Try selecting a higher value."
+            )
 
 if not (paper or input_text):
     st.warning("Enter text or select paper first")

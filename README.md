@@ -9,9 +9,3 @@
 ```
 poetry run streamlit run app.py
 ```
-
-# Goal
-
-- [ ] select persona, select paper
-- [ ] make a brief analysis
-- [ ] host it on heroku
