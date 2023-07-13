@@ -4,6 +4,9 @@ import openai
 import streamlit as st
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+INPUT_LIMIT = 10000
+
 LANGUAGES = {
     "English": "EN",
     "Spanish": "ES",
@@ -20,7 +23,36 @@ PERSONAE = {
 }
 
 
-def generate_summarizer(max_tokens, temperature, prompt, person_type, language):
+def chunker(iterable, chunksize):
+    for i, c in enumerate(iterable[::chunksize]):
+        yield iterable[i * chunksize : (i + 1) * chunksize]
+
+
+def summarise(max_tokens, temperature, text_to_summarise, persona, language):
+    if len(text_to_summarise) > INPUT_LIMIT:
+        st.warning(
+            "The text you selected longer than GPT's character limit. We will therefore split it up into chunks and obtain summaries for each of the chunks."
+        )
+
+    for chunk in chunker(text_to_summarise, INPUT_LIMIT):
+        with st.spinner("Request sent to GPT-3.5"):
+            message, finish_reason = prompt(
+                max_tokens,
+                temperature,
+                chunk,
+                persona,
+                language,
+            )
+            st.success(message)
+
+        if finish_reason == "length":
+            st.error(
+                "The model's response was cut off because the result was longer than the selected `max_tokens` value. Try selecting a higher value."
+            )
+    return message
+
+
+def prompt(max_tokens, temperature, prompt, person_type, language):
     lengths = ["extremely short", "short", "long"]
     length = lengths[int(max_tokens / 200)]
 
@@ -47,6 +79,9 @@ def generate_summarizer(max_tokens, temperature, prompt, person_type, language):
 papers = {}
 if "paper" not in st.session_state:
     st.session_state.paper = ""
+
+if "compare" not in st.session_state:
+    st.session_state.compare = False
 
 with open("papers.json") as f:
     papers = json.load(f)
@@ -111,12 +146,6 @@ with options_column1:
         step=0.01,
         help="Temperature indicates how reproducable GPT-3.5's results will be, with 0 meaning very reproduceable, and 1 meaning practically random.",
     )
-    # top_p = st.slider(
-    #    "Nucleus Sampling", min_value=0.0, max_value=1.0, value=0.5, step=0.01
-    # )
-    # f_pen = st.slider(
-    #    "Frequency Penalty", min_value=-1.0, max_value=1.0, value=0.0, step=0.01
-    # ) """  # these are not so relevant to this demonstration
 
 # Selection box to select the summarization style
 with options_column2:
@@ -124,6 +153,12 @@ with options_column2:
         "How do you like to be explained?",
         PERSONAE.keys(),
         format_func=lambda x: f"{PERSONAE[x]} {x}",
+        disabled=st.session_state.compare,
+    )
+
+    st.checkbox(
+        "**Comparison mode**: one request for each persona will be sent to GPT and the results displayed next to each other!",
+        key="compare",
     )
 
 with options_column3:
@@ -140,20 +175,31 @@ if st.button(
     use_container_width=True,
     disabled=bool(not (paper or input_text)),
 ):
-    with st.spinner("Request sent to GPT-3.5"):
-        message, finish_reason = generate_summarizer(
-            token,
-            temp,
-            input_text if input_text else papers[paper]["Text"],
-            persona,
-            language,
-        )
-        st.success(message)
+    text_to_summarise = input_text if input_text else papers[paper]["Text"]
 
-        if finish_reason == "length":
-            st.error(
-                "The model's response was cut off because the it was longer than the selected `max_tokens` value. Try selecting a higher value."
-            )
+    if st.session_state.compare:
+        persona_columns = st.columns(len(PERSONAE))
+        data = {
+            "text_to_summarise": text_to_summarise,
+            "language": language,
+            "temperature": temp,
+            "max_lenght": token,
+        }
+        for pc in zip(persona_columns, PERSONAE.keys()):
+            with pc[0]:
+                st.subheader(pc[1])
+                message = summarise(token, temp, text_to_summarise, pc[1], language)
+            data[pc[1]] = message
+        st.download_button(
+            "⬇️ Download results",
+            json.dumps(data),
+            file_name="results.json",
+            mime="text/json",
+            use_container_width=True,
+        )
+
+    else:
+        summarise(token, temp, text_to_summarise, persona, language)
 
 if not (paper or input_text):
     st.warning("Enter text or select paper first")
