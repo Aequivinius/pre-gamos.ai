@@ -2,6 +2,8 @@ import os
 import json
 import openai
 import streamlit as st
+import io
+import zipfile
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -28,6 +30,7 @@ def chunker(iterable, chunksize):
         yield iterable[i * chunksize : (i + 1) * chunksize]
 
 
+@st.cache_data
 def summarise(max_tokens, temperature, text_to_summarise, persona, language):
     if len(text_to_summarise) > INPUT_LIMIT:
         st.warning(
@@ -176,30 +179,77 @@ if st.button(
     disabled=bool(not (paper or input_text)),
 ):
     text_to_summarise = input_text if input_text else papers[paper]["Text"]
+    data = {
+        "text_to_summarise": text_to_summarise,
+        "language": language,
+        "temperature": temp,
+        "max_lenght": token,
+    }
 
     if st.session_state.compare:
         persona_columns = st.columns(len(PERSONAE))
-        data = {
-            "text_to_summarise": text_to_summarise,
-            "language": language,
-            "temperature": temp,
-            "max_lenght": token,
-        }
+
         for pc in zip(persona_columns, PERSONAE.keys()):
             with pc[0]:
                 st.subheader(pc[1])
                 message = summarise(token, temp, text_to_summarise, pc[1], language)
             data[pc[1]] = message
-        st.download_button(
-            "⬇️ Download results",
-            json.dumps(data),
-            file_name="results.json",
-            mime="text/json",
-            use_container_width=True,
-        )
+
+        download_column_1, download_column_2 = st.columns(2)
+
+        with download_column_1:
+            st.download_button(
+                "⬇️ Download results as JSON",
+                json.dumps(data),
+                file_name="results.json",
+                mime="text/json",
+                use_container_width=True,
+            )
+
+        with download_column_2:
+            zip_buffer = io.BytesIO()
+
+            with zipfile.ZipFile(
+                zip_buffer, "a", zipfile.ZIP_DEFLATED, False
+            ) as zip_file:
+                for key, value in {
+                    k: v for k, v in data.items() if k in PERSONAE.keys()
+                }.items():
+                    zip_file.writestr(
+                        f"{key}.txt", io.BytesIO(str.encode(value)).getvalue()
+                    )
+
+            st.download_button(
+                "⬇️ Download results as plain text",
+                zip_buffer.getvalue(),
+                file_name="results.zip",
+                mime="application/zip",
+                use_container_width=True,
+            )
 
     else:
-        summarise(token, temp, text_to_summarise, persona, language)
+        message = summarise(token, temp, text_to_summarise, persona, language)
+        data[persona] = message
+
+        download_column_1, download_column_2 = st.columns(2)
+
+        with download_column_1:
+            st.download_button(
+                "⬇️ Download result as JSON",
+                json.dumps(data),
+                file_name="result.json",
+                mime="text/json",
+                use_container_width=True,
+            )
+
+        with download_column_2:
+            st.download_button(
+                "⬇️ Download result as plain text",
+                message,
+                file_name=f"result_{persona}.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
 
 if not (paper or input_text):
     st.warning("Enter text or select paper first")
