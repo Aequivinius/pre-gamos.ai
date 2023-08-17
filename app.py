@@ -4,6 +4,9 @@ import openai
 import streamlit as st
 import io
 import zipfile
+import difflib
+from annotated_text import annotated_text as at
+from annotated_text import annotation
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -24,10 +27,56 @@ PERSONAE = {
     "Professional Clinician": "🧑‍⚕️",
 }
 
+st.set_page_config(
+    page_title="Summarisation",
+    page_icon="🧊",
+    initial_sidebar_state="expanded",
+    menu_items={
+        "Get Help": "https://www.extremelycoolapp.com/help",
+        "Report a bug": "https://www.extremelycoolapp.com/bug",
+        "About": "# This is a header. This is an *extremely* cool app!",
+    },
+)
+
 
 def chunker(iterable, chunksize):
     for i, c in enumerate(iterable[::chunksize]):
         yield iterable[i * chunksize : (i + 1) * chunksize]
+
+
+def markup_text(text, code):
+    mapping = {
+        "delete": 'style="text-decoration: line-through;',
+        "insert": 'style="color: green;"',
+        "replace": 'style="color: blue" id="1245"',
+    }
+    try:
+        return f'<span {mapping[code]};">{text}</span>'
+    except:
+        return text
+
+
+def markup(tokens, code):
+    return [markup_text(token, code) for token in tokens]
+
+
+def show_diff(a, b):
+    """Unify operations between two compared strings
+    seqm is a difflib.SequenceMatcher instance whose a & b are strings"""
+    seqm = difflib.SequenceMatcher(None, a.split(" "), b.split(" "))
+    output_a, output_b = [], []
+    for opcode, a0, a1, b0, b1 in seqm.get_opcodes():
+        if opcode == "equal":
+            output_a.append(" ".join(seqm.a[a0:a1]) + " ")
+            output_b.append(" ".join(seqm.b[b0:b1]) + " ")
+        if opcode == "delete":
+            output_a.append((" ".join(seqm.a[a0:a1]), "delete", "#f4baba"))
+        if opcode == "replace":
+            output_a.append((" ".join(seqm.a[a0:a1]), "replace", "#babdf4"))
+            output_b.append((" ".join(seqm.b[b0:b1]), "replace", "#babdf4"))
+        if opcode == "insert":
+            output_b.append((" ".join(seqm.b[b0:b1]), "insert", "#baf4cc"))
+    return output_a, output_b
 
 
 @st.cache_data
@@ -193,7 +242,10 @@ if st.button(
             with pc[0]:
                 st.subheader(pc[1])
                 message = summarise(token, temp, text_to_summarise, pc[1], language)
+
             data[pc[1]] = message
+
+        st.write("---")
 
         download_column_1, download_column_2 = st.columns(2)
 
@@ -226,6 +278,49 @@ if st.button(
                 mime="application/zip",
                 use_container_width=True,
             )
+
+        st.write("---")
+        st.header("Comparison")
+        compare_column_1, compare_column_2 = st.columns(2)
+
+        marked_a, marked_b = show_diff(data[list(PERSONAE)[0]], data[list(PERSONAE)[1]])
+
+        with compare_column_1:
+            st.subheader(list(PERSONAE)[0])
+            at(marked_a)
+
+        with compare_column_2:
+            st.subheader(list(PERSONAE)[1])
+            at(marked_b)
+
+        st.write("---")
+        compare_column_1, compare_column_2 = st.columns(2)
+
+        marked_a, marked_b = show_diff(data[list(PERSONAE)[1]], data[list(PERSONAE)[2]])
+
+        with compare_column_1:
+            st.subheader(list(PERSONAE)[1])
+            at(marked_a)
+
+        with compare_column_2:
+            st.subheader(list(PERSONAE)[2])
+            at(marked_b)
+
+        st.write("---")
+
+        compare_column_1, compare_column_2 = st.columns(2)
+
+        marked_a, marked_b = show_diff(data[list(PERSONAE)[2]], data[list(PERSONAE)[3]])
+
+        with compare_column_1:
+            st.subheader(list(PERSONAE)[2])
+            at(marked_a)
+
+        with compare_column_2:
+            st.subheader(list(PERSONAE)[3])
+            at(marked_b)
+
+        st.write("---")
 
     else:
         message = summarise(token, temp, text_to_summarise, persona, language)
