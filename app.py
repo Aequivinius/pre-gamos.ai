@@ -6,7 +6,6 @@ import io
 import zipfile
 import difflib
 from annotated_text import annotated_text as at
-from annotated_text import annotation
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -28,14 +27,8 @@ PERSONAE = {
 }
 
 st.set_page_config(
-    page_title="Summarisation",
+    page_title="Biomedical text summarisation",
     page_icon="🧊",
-    initial_sidebar_state="expanded",
-    menu_items={
-        "Get Help": "https://www.extremelycoolapp.com/help",
-        "Report a bug": "https://www.extremelycoolapp.com/bug",
-        "About": "# This is a header. This is an *extremely* cool app!",
-    },
 )
 
 
