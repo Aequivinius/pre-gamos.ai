@@ -3,6 +3,4 @@
 data/*
 .DS_Store
 __pycache__
-*toml
-*lock
 .env
