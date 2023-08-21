@@ -9,3 +9,7 @@
 ```
 poetry run streamlit run app.py
 ```
+
+# Development
+
+* I like to use `poetry`, but I always forget that `streamlit` doesn't, so I need to remember to `poetry export -f requirements.txt --output requirements.txt` before `push`ing
