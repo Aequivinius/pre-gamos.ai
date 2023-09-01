@@ -1,4 +1,6 @@
 streamlit
 openai
 st-annotated-text
+fugashi
+unidic-lite
 biopython

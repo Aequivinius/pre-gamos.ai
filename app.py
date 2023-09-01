@@ -158,7 +158,7 @@ with options_column3:
 def summarise(max_tokens, temperature, text_to_summarise, persona, language):
     if len(text_to_summarise) > INPUT_LIMIT:
         st.warning(
-            "The text you selected longer than GPT's character limit. We will therefore split it up into chunks and obtain summaries for each of the chunks."
+            "The text you selected longer than GPT's character limit. We will therefore if it up into chunks and obtain summaries for each of the chunks."
         )
     messages = ""
     for chunk in chunker(text_to_summarise, INPUT_LIMIT):
@@ -253,9 +253,20 @@ if st.button(
         # COMPARISON
         ############
         st.header("Comparison")
+
+        with st.columns(3)[1]:
+            legend = [
+                ("delete", "", "#f4baba"),
+                ("replace", "", "#babdf4"),
+                ("insert", "", "#baf4cc"),
+            ]
+            at(legend)
+
         compare_column_1, compare_column_2 = st.columns(2)
 
-        marked_a, marked_b = show_diff(data[list(PERSONAE)[0]], data[list(PERSONAE)[1]])
+        marked_a, marked_b = show_diff(
+            data[list(PERSONAE)[0]], data[list(PERSONAE)[1]], language
+        )
 
         with compare_column_1:
             st.subheader(list(PERSONAE)[0])
@@ -268,7 +279,9 @@ if st.button(
         st.write("---")
         compare_column_1, compare_column_2 = st.columns(2)
 
-        marked_a, marked_b = show_diff(data[list(PERSONAE)[1]], data[list(PERSONAE)[2]])
+        marked_a, marked_b = show_diff(
+            data[list(PERSONAE)[1]], data[list(PERSONAE)[2]], language
+        )
 
         with compare_column_1:
             st.subheader(list(PERSONAE)[1])
@@ -282,7 +295,9 @@ if st.button(
 
         compare_column_1, compare_column_2 = st.columns(2)
 
-        marked_a, marked_b = show_diff(data[list(PERSONAE)[2]], data[list(PERSONAE)[3]])
+        marked_a, marked_b = show_diff(
+            data[list(PERSONAE)[2]], data[list(PERSONAE)[3]], language
+        )
 
         with compare_column_1:
             st.subheader(list(PERSONAE)[2])

@@ -4,9 +4,11 @@ import difflib
 from streamlit import cache_data
 import openai
 from constants import *
+import fugashi
 
 # SETUP
 Entrez.email = "nicola.colic@supsi.ch"
+jp_tagger = None
 
 
 def chunker(iterable, chunksize):
@@ -30,22 +32,30 @@ def fetch_abstract(pmid):
 
 
 @cache_data
-def show_diff(a, b):
+def show_diff(a, b, lang=None):
     """Unify operations between two compared strings
     seqm is a difflib.SequenceMatcher instance whose a & b are strings"""
-    seqm = difflib.SequenceMatcher(None, a.split(" "), b.split(" "))
+    if lang != "Japanese":
+        seqm = difflib.SequenceMatcher(None, a.split(" "), b.split(" "))
+    else:
+        global jp_tagger
+        if jp_tagger is None:
+            jp_tagger = fugashi.Tagger()
+        a_tokens = [word.surface for word in jp_tagger(a)]
+        b_tokens = [word.surface for word in jp_tagger(b)]
+        seqm = difflib.SequenceMatcher(None, a_tokens, b_tokens)
     output_a, output_b = [], []
     for opcode, a0, a1, b0, b1 in seqm.get_opcodes():
         if opcode == "equal":
             output_a.append(" ".join(seqm.a[a0:a1]) + " ")
             output_b.append(" ".join(seqm.b[b0:b1]) + " ")
         if opcode == "delete":
-            output_a.append((" ".join(seqm.a[a0:a1]), "delete", "#f4baba"))
+            output_a.append((" ".join(seqm.a[a0:a1]), "", "#f4baba"))
         if opcode == "replace":
-            output_a.append((" ".join(seqm.a[a0:a1]), "replace", "#babdf4"))
-            output_b.append((" ".join(seqm.b[b0:b1]), "replace", "#babdf4"))
+            output_a.append((" ".join(seqm.a[a0:a1]), "", "#babdf4"))
+            output_b.append((" ".join(seqm.b[b0:b1]), "", "#babdf4"))
         if opcode == "insert":
-            output_b.append((" ".join(seqm.b[b0:b1]), "insert", "#baf4cc"))
+            output_b.append((" ".join(seqm.b[b0:b1]), "", "#baf4cc"))
     return output_a, output_b
 
 
@@ -68,7 +78,10 @@ def prompt(max_tokens, temperature, prompt, persona, language):
 
     if language != "English":
         messages.append(
-            {"role": "user", "content": f"Now translate this into {language}"}
+            {
+                "role": "user",
+                "content": f"Now translate this into {language} {characteristics}",
+            }
         )
 
     res = openai.ChatCompletion.create(
