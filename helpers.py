@@ -84,6 +84,9 @@ def prompt(max_tokens, temperature, prompt, persona, language):
             }
         )
 
+    if language == "Japanese":
+        max_tokens *= 5
+
     res = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         max_tokens=max_tokens,

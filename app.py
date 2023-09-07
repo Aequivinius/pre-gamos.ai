@@ -118,7 +118,7 @@ with options_column1:
         max_value=500,
         value=250,
         step=1,
-        help="""GPT does not allow generation of responses of a certain length; rather, it will finish when it it has *finished an idea*. However, this value will influence the prompt: `max_tokens < 200` for *extremely short*, `200-300` for *short* and above that for *long*. However, while it has some effect on the response, it is not deterministic.""",
+        help="""GPT does not allow generation of responses of a certain length; rather, it will finish when it it has *finished an idea*. However, this value will influence the prompt: `max_tokens < 200` for *extremely short*, `200-300` for *short* and above that for *long*. However, while it has some effect on the response, it is not deterministic. Note that for Japanese, the `max_tokens` is multiplied by 5.""",
     )
     temp = st.slider(
         "🌡️ Temperature",
@@ -161,6 +161,7 @@ def summarise(max_tokens, temperature, text_to_summarise, persona, language):
             "The text you selected longer than GPT's character limit. We will therefore if it up into chunks and obtain summaries for each of the chunks."
         )
     messages = ""
+
     for chunk in chunker(text_to_summarise, INPUT_LIMIT):
         with st.spinner("Request sent to GPT-3.5"):
             message, finish_reason = prompt(
@@ -217,11 +218,13 @@ if st.button(
         #############
         download_column_1, download_column_2 = st.columns(2)
 
+        prefix = f'{data["text_to_summarise"][:10]}_{data["language"]}'
+
         with download_column_1:
             st.download_button(
                 "⬇️ Download results as JSON",
                 json.dumps(data),
-                file_name="results.json",
+                file_name=f"{prefix}.json",
                 mime="text/json",
                 use_container_width=True,
             )
@@ -236,13 +239,13 @@ if st.button(
                     k: v for k, v in data.items() if k in PERSONAE.keys()
                 }.items():
                     zip_file.writestr(
-                        f"{key}.txt", io.BytesIO(str.encode(value)).getvalue()
+                        f"{prefix}_{key}.txt", io.BytesIO(str.encode(value)).getvalue()
                     )
 
             st.download_button(
                 "⬇️ Download results as plain text",
                 zip_buffer.getvalue(),
-                file_name="results.zip",
+                file_name=f"{prefix}.zip",
                 mime="application/zip",
                 use_container_width=True,
             )
