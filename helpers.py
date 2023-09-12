@@ -72,6 +72,40 @@ def prompt(max_tokens, temperature, prompt, persona, language):
         },
         {
             "role": "user",
+            "content": f"Create a {length} summary of the following text {characteristics} { ('in' + language) if language != 'English' else ''}: {prompt}",
+        },
+    ]
+
+    if language != "English":
+        messages.append(
+            {
+                "role": "user",
+                "content": f"Now translate this into {language} {characteristics}",
+            }
+        )
+
+    if language == "Japanese":
+        max_tokens *= 5
+
+    res = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        max_tokens=max_tokens,
+        temperature=temperature,
+        messages=messages,
+    )
+    return res["choices"][0]["message"]["content"], res["choices"][0]["finish_reason"]
+
+
+def prompt_(max_tokens, temperature, prompt, persona, language):
+    length = LENGTHS[int(max_tokens / 200)]
+    characteristics = CHARACTERISTICS[persona]
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant for text summarization.",
+        },
+        {
+            "role": "user",
             "content": f"Create a {length} summary of the following text {characteristics}: {prompt}",
         },
     ]
