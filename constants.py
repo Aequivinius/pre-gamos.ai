@@ -13,7 +13,7 @@ LANGUAGES = {
 PERSONAE = {
     "Teenager": "👶",
     "Adult Layperson": "🧑",
-    "University Student in Biomedicine": "🧑‍🎓",
+    # "University Student in Biomedicine": "🧑‍🎓",
     "Professional Clinician": "🧑‍⚕️",
 }
 

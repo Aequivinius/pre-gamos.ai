@@ -1,5 +1,6 @@
 from helpers import *
 from constants import *
+from itertools import combinations
 
 import openai
 import streamlit as st
@@ -49,11 +50,10 @@ st.subheader(
 
 st.write("---")
 
+
 ######################
 # INPUT TEXT SELECTION
 ######################
-
-
 def set_input():
     st.session_state.placeholder = ""
     if st.session_state.manual:
@@ -265,52 +265,19 @@ if st.button(
             ]
             at(legend)
 
-        compare_column_1, compare_column_2 = st.columns(2)
+        for a, b in combinations(PERSONAE, 2):
+            marked_a, marked_b = show_diff(data[a], data[b], language)
 
-        marked_a, marked_b = show_diff(
-            data[list(PERSONAE)[0]], data[list(PERSONAE)[1]], language
-        )
+            compare_column_1, compare_column_2 = st.columns(2)
+            with compare_column_1:
+                st.subheader(a)
+                at(marked_a)
 
-        with compare_column_1:
-            st.subheader(list(PERSONAE)[0])
-            at(marked_a)
+            with compare_column_2:
+                st.subheader(b)
+                at(marked_b)
 
-        with compare_column_2:
-            st.subheader(list(PERSONAE)[1])
-            at(marked_b)
-
-        st.write("---")
-        compare_column_1, compare_column_2 = st.columns(2)
-
-        marked_a, marked_b = show_diff(
-            data[list(PERSONAE)[1]], data[list(PERSONAE)[2]], language
-        )
-
-        with compare_column_1:
-            st.subheader(list(PERSONAE)[1])
-            at(marked_a)
-
-        with compare_column_2:
-            st.subheader(list(PERSONAE)[2])
-            at(marked_b)
-
-        st.write("---")
-
-        compare_column_1, compare_column_2 = st.columns(2)
-
-        marked_a, marked_b = show_diff(
-            data[list(PERSONAE)[2]], data[list(PERSONAE)[3]], language
-        )
-
-        with compare_column_1:
-            st.subheader(list(PERSONAE)[2])
-            at(marked_a)
-
-        with compare_column_2:
-            st.subheader(list(PERSONAE)[3])
-            at(marked_b)
-
-        st.write("---")
+            st.write("---")
 
     else:
         message = summarise(
