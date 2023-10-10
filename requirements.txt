@@ -3,4 +3,5 @@ openai
 st-annotated-text
 fugashi
 unidic-lite
+textstat
 biopython

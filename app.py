@@ -1,6 +1,7 @@
 from helpers import *
 from constants import *
 from itertools import combinations
+from readability import *
 
 import openai
 import streamlit as st
@@ -114,11 +115,11 @@ options_column1, options_column2, options_column3 = st.columns(3)
 with options_column1:
     token = st.slider(
         "maximum № tokens",
-        min_value=0,
-        max_value=500,
-        value=250,
-        step=1,
-        help="""GPT does not allow generation of responses of a certain length; rather, it will finish when it it has *finished an idea*. However, this value will influence the prompt: `max_tokens < 200` for *extremely short*, `200-300` for *short* and above that for *long*. However, while it has some effect on the response, it is not deterministic. Note that for Japanese, the `max_tokens` is multiplied by 5.""",
+        min_value=200,
+        max_value=1000,
+        value=1000,
+        step=10,
+        help="""GPT does not allow generation of responses of a certain length; rather, it will finish when it it has *finished an idea*. This value will just cut off the generation to prevent incuring high costs.""",
     )
     temp = st.slider(
         "🌡️ Temperature",
@@ -161,7 +162,6 @@ def summarise(max_tokens, temperature, text_to_summarise, persona, language):
             "The text you selected longer than GPT's character limit. We will therefore if it up into chunks and obtain summaries for each of the chunks."
         )
     messages = ""
-
     for chunk in chunker(text_to_summarise, INPUT_LIMIT):
         with st.spinner("Request sent to GPT-3.5"):
             message, finish_reason = prompt(
@@ -202,14 +202,22 @@ if st.button(
     if st.session_state.compare:
         persona_columns = st.columns(len(PERSONAE))
 
-        for pc in zip(persona_columns, PERSONAE.keys()):
-            with pc[0]:
-                st.subheader(pc[1])
+        for persona_column, current_persona in zip(persona_columns, PERSONAE.keys()):
+            with persona_column:
+                st.subheader(current_persona)
                 message = summarise(
-                    token, temp, st.session_state.text_to_summarise, pc[1], language
+                    token,
+                    temp,
+                    st.session_state.text_to_summarise,
+                    current_persona,
+                    language,
                 )
 
-            data[pc[1]] = message
+                ease = readability(message, language)
+                at((str(ease), "readability"))
+
+            data[current_persona] = message
+            data[f"readability_{current_persona}"] = ease
 
         st.write("---")
 
@@ -284,6 +292,10 @@ if st.button(
             token, temp, st.session_state.text_to_summarise, persona, language
         )
         data[persona] = message
+
+        ease = readability(message, language)
+        at((str(ease), "readability"))
+        data["readability"] = ease
 
         download_column_1, download_column_2 = st.columns(2)
 
