@@ -1,8 +1,6 @@
 from helpers import *
-from constants import *
-from itertools import combinations
-from readability import *
 
+from itertools import combinations
 import openai
 import streamlit as st
 import json
@@ -13,26 +11,10 @@ from annotated_text import annotated_text as at
 # SETUP
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-###################
 # SESSION VARIABLES
-###################
-if "text_to_summarise" not in st.session_state:
-    st.session_state.text_to_summarise = ""
-
-if "manual" not in st.session_state:
-    st.session_state.manual = ""
-
-if "paper" not in st.session_state:
-    st.session_state.paper = ""
-
-if "pmid" not in st.session_state:
-    st.session_state.pmid = ""
-
-if "placeholde" not in st.session_state:
-    st.session_state.placeholder = ""
-
-if "compare" not in st.session_state:
-    st.session_state.compare = False
+for variable, initialisation in SESSION_STATES.items():
+    if variable not in st.session_state:
+        st.session_state[variable] = initialisation
 
 ##############
 # TITLE MATTER
@@ -43,13 +25,10 @@ st.set_page_config(
 )
 
 st.title(
-    "Biomedical :blue[text summarization] and :blue[simplification] using GPT-3.5 🤖"
-)
-st.subheader(
-    "By selecting a specific persona from the drop down menu below, you can indicate the degree to which your text should be simplified."
+    "Biomedical :blue[text summarisation] and :blue[simplification] using GPT-3.5 🤖"
 )
 
-st.write("---")
+"---"
 
 
 ######################
@@ -74,7 +53,7 @@ def set_input():
 input_column_1, input_column_2 = st.columns([0.66, 0.33])
 with input_column_1:
     st.text_area(
-        "Enter a text you want to summarize:",
+        "Enter a text you want to summarise:",
         height=215,
         placeholder=st.session_state.placeholder,
         key="manual",
@@ -82,9 +61,8 @@ with input_column_1:
     )
 
 with input_column_2:
-    options = {"": "Select an option"}
-    for p in PAPERS.keys():
-        options[p] = PAPERS[p]["Label"]
+    options = {p: PAPERS[p]["Label"] for p in PAPERS.keys()}
+    options[""] = "Select an option"
 
     paper = st.selectbox(
         "Or select one of the pre-chosen paper segments below:",
@@ -107,7 +85,7 @@ else:
 st.write("---")
 
 ##################
-# HYPER PARAMETERS
+# HYPER-PARAMETERS
 ##################
 options_column1, options_column2, options_column3 = st.columns(3)
 
@@ -183,7 +161,7 @@ def summarise(max_tokens, temperature, text_to_summarise, persona, language):
 
 # The summarisation call and all the further processing
 if st.button(
-    "Summarize!",
+    "Summarise!",
     type="primary",
     use_container_width=True,
     disabled=bool(
@@ -319,3 +297,67 @@ if st.button(
 
 if not any([st.session_state.manual, st.session_state.pmid, st.session_state.paper]):
     st.warning("Enter text (press enter) or PMID or select paper first")
+
+
+def batch(st=st):
+    progress_sofar = 0.0
+    progress_bar = st.progress(progress_sofar)
+    calls = len(QUESTIONAIRE_PAPERS) * len(LANGUAGES.keys()) * len(PERSONAE.keys())
+    step = 1.0 / calls
+
+    data = []
+    for paper in QUESTIONAIRE_PAPERS:
+        for language in LANGUAGES.keys():
+            for persona in PERSONAE.keys():
+                message, finish_reason = prompt(
+                    token, temp, PAPERS[paper], persona, language
+                )
+
+                data.append(
+                    {
+                        "language": language,
+                        "paper": paper,
+                        "persona": persona,
+                        "summary": message if message else finish_reason,
+                        "readability": readability(message, language),
+                    }
+                )
+
+                progress_sofar += step
+                progress_bar.progress(progress_sofar if progress_sofar < 1.0 else 1.0)
+
+    st.download_button(
+        "⬇️ Download result as JSON",
+        json.dumps(data),
+        file_name="batch.json",
+        mime="text/json",
+        use_container_width=True,
+    )
+
+    st.download_button(
+        "⬇️ Download result as CSV",
+        data_to_csv(data),
+        file_name="batch.csv",
+        mime="text/plain",
+        use_container_width=True,
+    )
+
+
+"---"
+batch_expander = st.expander("Batch summarisation", expanded=False)
+batch_expander.caption(
+    f"This will query all languages for all personae for three specific papers ({', '.join(QUESTIONAIRE_PAPERS)})."
+)
+
+batch_expander.checkbox(
+    "The following action runs quite a lot of queries to ChatGPT and thus incurs somewhat of a cost. Please use this feature sparingly (if not previously cached)! 🙏",
+    key="batch",
+)
+
+if batch_expander.button(
+    "Generate!",
+    type="secondary",
+    use_container_width=True,
+    disabled=not st.session_state.batch,
+):
+    batch(batch_expander)

@@ -3,8 +3,8 @@ from Bio.Entrez import efetch, read
 import difflib
 from streamlit import cache_data
 import openai
-from constants import *
 import fugashi
+from . import constants
 
 # SETUP
 Entrez.email = "nicola.colic@supsi.ch"
@@ -62,8 +62,10 @@ def show_diff(a, b, lang=None):
 ##############
 # OPENAI STUFF
 ##############
+@cache_data
 def prompt(max_tokens, temperature, prompt, persona, language):
-    characteristics = CHARACTERISTICS[persona]
+    characteristics = constants.CHARACTERISTICS[persona]
+
     messages = [
         {
             "role": "system",
@@ -82,3 +84,16 @@ def prompt(max_tokens, temperature, prompt, persona, language):
         messages=messages,
     )
     return res["choices"][0]["message"]["content"], res["choices"][0]["finish_reason"]
+
+
+############
+# DATA STUFF
+############
+def data_to_csv(data):
+    import csv, io
+
+    csv_buffer = io.StringIO()
+    fc = csv.DictWriter(csv_buffer, fieldnames=data[0].keys())
+    fc.writeheader()
+    fc.writerows(data)
+    return csv_buffer.getvalue()

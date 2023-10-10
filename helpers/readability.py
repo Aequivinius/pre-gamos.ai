@@ -14,7 +14,6 @@ def readability(text, language):
             "Spanish": "ES",
             "Italian": "IT",
             "German": "DE",
-            "Japanese": "JP",
         }[language].lower()
     )
     return textstat.flesch_reading_ease(text)

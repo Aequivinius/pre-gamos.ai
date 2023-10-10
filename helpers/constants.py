@@ -1,4 +1,5 @@
 import json
+import os
 
 INPUT_LIMIT = 10000
 
@@ -19,6 +20,16 @@ PERSONAE = {
 
 LENGTHS = ["extremely short", "short", "long"]
 
+SESSION_STATES = {
+    "text_to_summarise": "",
+    "manual": "",
+    "paper": "",
+    "pmid": "",
+    "placeholder": "",
+    "compare": False,
+    "batch": False,
+}
+
 
 CHARACTERISTICS = {
     "Teenager": "for a 15-year old child, using simple language and avoiding any technical terms, or complicated words or abbreviations",
@@ -28,5 +39,8 @@ CHARACTERISTICS = {
 }
 
 PAPERS = {}
-with open("papers.json") as f:
+with open(os.path.join(os.path.dirname(__file__), "papers.json")) as f:
     PAPERS = json.load(f)
+
+
+QUESTIONAIRE_PAPERS = ["Mehra", "Chaccour", "Howard"]
