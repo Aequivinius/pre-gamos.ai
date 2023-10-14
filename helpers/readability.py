@@ -1,6 +1,8 @@
 import textstat
 import fugashi
 
+from . import LANGUAGES
+
 readability_tagger = None
 
 
@@ -8,14 +10,7 @@ def readability(text, language):
     if language == "Japanese":
         return readability_jp(text)
 
-    textstat.set_lang(
-        {
-            "English": "EN",
-            "Spanish": "ES",
-            "Italian": "IT",
-            "German": "DE",
-        }[language].lower()
-    )
+    textstat.set_lang(LANGUAGES[language].lower())
     return textstat.flesch_reading_ease(text)
 
 

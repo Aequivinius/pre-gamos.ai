@@ -5,9 +5,10 @@ INPUT_LIMIT = 10000
 
 LANGUAGES = {
     "English": "EN",
-    "Spanish": "ES",
-    "Italian": "IT",
     "German": "DE",
+    "French": "FR",
+    "Italian": "IT",
+    "Spanish": "ES",
     "Japanese": "JP",
 }
 
