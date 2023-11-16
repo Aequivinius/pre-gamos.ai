@@ -77,7 +77,7 @@ def prompt(max_tokens, temperature, prompt, persona, language):
         },
     ]
 
-    res = openai.ChatCompletion.create(
+    res = openai.chat.completions.create(
         model="gpt-3.5-turbo",
         max_tokens=max_tokens,
         temperature=temperature,
