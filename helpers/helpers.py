@@ -86,7 +86,7 @@ def prompt(max_tokens, temperature, prompt, persona, language):
         temperature=temperature,
         messages=messages,
     )
-    return res["choices"][0]["message"]["content"], res["choices"][0]["finish_reason"]
+    return res.choices[0].message.content, res.choices[0].finish_reason
 
 
 ############
