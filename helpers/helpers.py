@@ -1,10 +1,13 @@
 from Bio import Entrez
 from Bio.Entrez import efetch, read
 import difflib
-from streamlit import cache_data
-import openai
+from streamlit import cache_data, secrets
+from openai import OpenAI
 import fugashi
 from . import constants
+
+# SETUP
+gpt_client = OpenAI(api_key=secrets["OPENAI_API_KEY"])
 
 # SETUP
 Entrez.email = "nicola.colic@supsi.ch"
@@ -77,7 +80,7 @@ def prompt(max_tokens, temperature, prompt, persona, language):
         },
     ]
 
-    res = openai.chat.completions.create(
+    res = gpt_client.chat.completions.create(
         model="gpt-3.5-turbo",
         max_tokens=max_tokens,
         temperature=temperature,
