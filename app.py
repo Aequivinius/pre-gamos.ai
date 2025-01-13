@@ -1,15 +1,11 @@
 from helpers import *
 
 from itertools import combinations
-import openai
 import streamlit as st
 import json
 import io
 import zipfile
 from annotated_text import annotated_text as at
-
-# SETUP
-openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # SESSION VARIABLES
 for variable, initialisation in SESSION_STATES.items():
